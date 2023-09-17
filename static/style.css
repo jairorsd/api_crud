@@ -1,0 +1,100 @@
+#cadastro {
+    width: 130px;
+    height: 15px;
+    padding: 10px;
+    background-color: blueviolet;
+    text-align: center;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    line-height: 25px;
+    text-decoration: none;
+}
+
+#cadastro:hover {
+    text-decoration: underline;
+}
+
+fieldset {
+    border: none;
+    width: auto;
+    text-align: right;
+    margin: 10px 0 0 0;
+}
+
+fieldset label:first-of-type {
+    float: left;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 15px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+#mensagem {
+    display: none;
+    text-align: center;
+    font-size: large;
+}
+
+#container {
+    display: block;
+    padding: 15px;
+}
+
+h2 {
+    font-weight: normal;
+}
+
+#pesquisar {
+    margin-left: 10px;
+}
+
+input[type=button] {
+    cursor: pointer;
+}
+
+#formCadastro,
+#formEdita {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+#formCadastro label,
+#formEdita label {
+    margin-bottom: 5px;
+}
+
+#formCadastro input,
+#formEdita input {
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+#formCadastro button,
+#formEdita button {
+    padding: 10px 20px;
+    align-self: baseline;
+    cursor: pointer;
+}
+
+#formCadastro select,
+#formEdita select {
+    padding: 5px;
+    align-self: baseline;
+    margin-bottom: 10px;
+}
+
+strong {
+    font-weight: bold;
+    font-style: italic;
+}

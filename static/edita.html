@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualizar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="container">
+        <h2>Atualizar Produto</h2>
+        <form id="formEdita">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" name="nome" spellcheck="false" required>
+            <label for="descricao">Descrição:</label>
+            <input type="text" id="descricao" name="descricao" spellcheck="false">
+            <label for="categoria">Categoria:</label>
+            <select id="categoria" name="categoria">
+                <option value="">Nenhum</option>
+            </select>
+            <button type="submit">Salvar</button>
+        </form>
+        <a href="http://localhost:8000">Ver produtos</a>
+    </div>
+
+    <script>
+
+        // recupera os valores dos parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get("id");
+        const nome = urlParams.get("nome");
+        const descricao = urlParams.get("descricao");
+        const categoria = urlParams.get("categoria");
+
+        // preenche os campos do formulário com o "nome" e "descrição" do produto passados através dos parâmetros de URL
+        document.getElementById("nome").value = nome;
+        document.getElementById("descricao").value = descricao;
+
+        // atualiza dinâmicamente o título h2
+        document.getElementsByTagName("h2")[0].innerHTML += ` com o ID <strong>${id}</strong>!`;
+
+        // Busca os nomes das categorias e adiciona no combo box 
+        (async () => {
+            try {
+                const url = "http://localhost:8000/categorias";
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.error) {
+                    mostrarMensagem(data.error);
+                } else if (data.categorias) {
+                    addCategoriasNoComboBox(data.categorias);
+
+                    // seleciona a opção no combo box que corresponde a categoria do produto que está sendo editado
+                    const comboBox = document.getElementById("categoria");
+                    for (let i = 0; i < comboBox.options.length; i++) {
+                        const option = comboBox.options[i];
+
+                        if (option.text === categoria) {
+                            comboBox.value = option.value;
+                            break;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        })();
+
+        function addCategoriasNoComboBox(categorias) {
+            const comboBox = document.getElementById("categoria");
+
+            categorias.forEach(categoria => {
+                const option = document.createElement("option");
+                option.value = categoria.id;
+                option.text = categoria.nome;
+                comboBox.appendChild(option);
+            });
+        };
+
+        const atualizarProduto = async () => {
+            const nomeProduto = document.getElementById("nome").value.trim();
+            const descricaoProduto = document.getElementById("descricao").value.trim();
+            const categoriaProduto = document.getElementById("categoria").value.trim();
+
+            const data = {
+                id: id,
+                nome: nomeProduto,
+                descricao: descricaoProduto,
+                categoria: categoriaProduto
+            };
+
+            try {
+                const url = `http://localhost:8000/produtos`;
+
+                const requestOptions = {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(data),
+                };
+
+                const response = await fetch(url, requestOptions);
+                const mensagem = await response.json();
+
+                if (mensagem.error) {
+                    alert(mensagem.error);
+                } else if (mensagem.message) {
+                    alert(mensagem.message);
+                }
+            } catch (error) {
+                console.error(error);
+                throw error;
+            }
+        };
+
+        document.getElementById("formEdita").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            try {
+                await atualizarProduto();
+            } catch (error) {
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+
+</html>

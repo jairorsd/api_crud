@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro Produto</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h2>Cadastrar Novo Produto</h2>
+    <form id="formCadastro">
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" name="nome" spellcheck="false" required>
+        <label for="descricao">Descrição:</label>
+        <input type="text" id="descricao" name="descricao" spellcheck="false">
+        <label for="categoria">Categoria:</label>
+        <select id="categoria" name="categoria">
+            <option value="">Nenhum</option>
+        </select>
+        <button type="submit">Salvar</button>
+    </form>
+    <a id="ver-produtos" href="http://localhost:8000">Ver produtos</a>
+
+    <script>
+
+        // Busca os nomes das categorias e adiciona no combo box 
+        (async () => {
+            try {
+                const url = "http://localhost:8000/categorias";
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.error) {
+                    mostrarMensagem(data.error);
+                } else if (data.categorias) {
+                    addCategoriasNoComboBox(data.categorias);
+
+                    // seleciona a opção no combo box que corresponde a categoria do produto que está sendo editado
+                    const comboBox = document.getElementById("categoria");
+                    for (let i = 0; i < comboBox.options.length; i++) {
+                        const option = comboBox.options[i];
+
+                        if (option.text === categoria) {
+                            comboBox.value = option.value;
+                            break;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        })();
+
+        function addCategoriasNoComboBox(categorias) {
+            const comboBox = document.getElementById("categoria");
+
+            categorias.forEach(categoria => {
+                const option = document.createElement("option");
+                option.value = categoria.id;
+                option.text = categoria.nome;
+                comboBox.appendChild(option);
+            });
+        };
+
+        const cadastrarProduto = async () => {
+            const nomeProduto = document.getElementById("nome").value.trim();
+            const descricaoProduto = document.getElementById("descricao").value.trim();
+            const categoriaProduto = document.getElementById("categoria").value.trim();
+
+            const data = {
+                nome: nomeProduto,
+                descricao: descricaoProduto,
+                categoria: categoriaProduto
+            };
+
+            try {
+                const url = `http://localhost:8000/produtos`;
+
+                const requestOptions = {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(data),
+                };
+
+                const response = await fetch(url, requestOptions);
+                const mensagem = await response.json();
+
+                if (mensagem.error) {
+                    alert(mensagem.error);
+                    console.log(mensagem.error);
+                } else if (mensagem.id) {
+                    alert("Produto criado com sucesso!" + " ID do Produto: " + mensagem.id);
+                }
+            } catch (error) {
+                console.error(error);
+                throw error;
+            }
+        };
+
+        document.getElementById("formCadastro").addEventListener("submit", async function (ev) {
+            ev.preventDefault();
+            
+            try {
+                await cadastrarProduto();
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+    </script>
+</body>
+
+</html>
