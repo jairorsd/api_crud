@@ -19,8 +19,7 @@ db.serialize(() => {
         )`
     );
 
-    // Consulta para saber se as tabelas "categoria" e "produto" estão vazias, se estiverem vazias, popula o banco com os dados
-    db.get("SELECT COUNT(*) AS totalCategorias FROM categoria", (err, row) => {
+    db.get('SELECT COUNT(*) AS totalCategorias FROM categoria', (err, row) => {
         if (err) {
             console.error(err.message);
             return;
@@ -28,7 +27,7 @@ db.serialize(() => {
 
         if (row.totalCategorias === 0) {
             categorias.forEach(categoria => {
-                db.run("INSERT INTO categoria (id, nome) VALUES (?, ?)", [categoria.id, categoria.nome], (err) => {
+                db.run('INSERT INTO categoria (id, nome) VALUES (?, ?)', [categoria.id, categoria.nome], (err) => {
                     if (err) {
                         console.error(err.message);
                     }
@@ -37,7 +36,7 @@ db.serialize(() => {
         }
     });
 
-    db.get("SELECT COUNT(*) AS totalProdutos FROM produto", (err, row) => {
+    db.get('SELECT COUNT(*) AS totalProdutos FROM produto', (err, row) => {
         if (err) {
             console.error(err.message);
             return;
@@ -45,7 +44,7 @@ db.serialize(() => {
 
         if (row.totalProdutos === 0) {
             produtos.forEach(produto => {
-                db.run("INSERT INTO produto (nome, descricao, categoria_id) VALUES (?, ?, ?)",
+                db.run('INSERT INTO produto (nome, descricao, categoria_id) VALUES (?, ?, ?)',
                     [produto.nome, produto.descricao, produto.categoria_id], (err) => {
                         if (err) {
                             console.error(err.message);
@@ -54,7 +53,7 @@ db.serialize(() => {
             });
         }
     });
-    console.log("BANCO DE DADOS PRONTO!");
+    console.log('BANCO DE DADOS PRONTO!');
 });
 
 module.exports = db;

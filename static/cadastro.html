@@ -13,62 +13,144 @@
     <h2>Cadastrar Novo Produto</h2>
     <form id="formCadastro">
         <label for="nome">Nome:</label>
-        <input type="text" id="nome" name="nome" spellcheck="false" required>
-        <label for="descricao">Descrição:</label>
-        <input type="text" id="descricao" name="descricao" spellcheck="false">
+        <input type="text" id="nome" name="nome" spellcheck="false" required onblur="validarCampoNome()">
+        <span class="mensagem-erro" id="mensagem-erro-nome"></span>
+        <label for="descricao">Descrição: <span class="opcional">(opcional)</label>
+        <input type="text" id="descricao" name="descricao" spellcheck="false" onblur="validarCampoDescricao()">
+        <span class="mensagem-erro" id="mensagem-erro-descricao"></span>
         <label for="categoria">Categoria:</label>
         <select id="categoria" name="categoria">
-            <option value="">Nenhum</option>
+            <option value="">Nenhuma</option>
         </select>
         <button type="submit">Salvar</button>
     </form>
-    <a id="ver-produtos" href="http://localhost:8000">Ver produtos</a>
 
     <script>
 
-        // Busca os nomes das categorias e adiciona no combo box 
-        (async () => {
+        const buscarCategorias = async () => {
+            const url = 'http://localhost:8000/categorias';
+
             try {
-                const url = "http://localhost:8000/categorias";
                 const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.error) {
-                    mostrarMensagem(data.error);
-                } else if (data.categorias) {
-                    addCategoriasNoComboBox(data.categorias);
-
-                    // seleciona a opção no combo box que corresponde a categoria do produto que está sendo editado
-                    const comboBox = document.getElementById("categoria");
-                    for (let i = 0; i < comboBox.options.length; i++) {
-                        const option = comboBox.options[i];
-
-                        if (option.text === categoria) {
-                            comboBox.value = option.value;
-                            break;
-                        }
-                    }
+                if (!response.ok) {
+                    const data = await response.json();
+                    console.log(data.error);
                 }
+                return response.ok ? await response.json() : [];
             } catch (error) {
-                console.error(error);
+                console.log(error);
+                return [];
             }
-        })();
-
-        function addCategoriasNoComboBox(categorias) {
-            const comboBox = document.getElementById("categoria");
-
-            categorias.forEach(categoria => {
-                const option = document.createElement("option");
-                option.value = categoria.id;
-                option.text = categoria.nome;
-                comboBox.appendChild(option);
-            });
         };
 
-        const cadastrarProduto = async () => {
-            const nomeProduto = document.getElementById("nome").value.trim();
-            const descricaoProduto = document.getElementById("descricao").value.trim();
-            const categoriaProduto = document.getElementById("categoria").value.trim();
+        const preencheComboBoxComAsCategorias = async () => {
+            const select = document.querySelector('#categoria');
+            const categorias = await buscarCategorias();
+
+            categorias.forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria.id;
+                option.text = categoria.nome;
+                select.appendChild(option);
+            });
+            return select;
+        };
+
+        preencheComboBoxComAsCategorias();
+
+        function exibirMensagemErro(campoId, mensagem) {
+            const mensagemElement = document.querySelector(`#mensagem-erro-${campoId}`);
+            if (mensagemElement) {
+                mensagemElement.textContent = mensagem;
+                mensagemElement.style.display = 'block';
+                mensagemElement.style.color = 'red';
+                mensagemElement.style.marginBottom = '15px';
+            }
+        };
+
+        function limparMensagemErro(campoId) {
+            const mensagemElement = document.querySelector(`#mensagem-erro-${campoId}`);
+            if (mensagemElement) {
+                mensagemElement.textContent = '';
+                mensagemElement.style.display = 'none';
+            }
+        };
+
+        function validarCampoNome() {
+            const nome = document.querySelector('#nome');
+            const regex = /^[a-zA-Z0-9\sÀ-ÿ]*$/; // expressão regular para validar letras de A a Z, números de 0 a 9, espaços em branco e letras acentuadas
+            const nomeValor = nome.value.trim();
+
+            limparMensagemErro('nome');
+
+            if (nomeValor === '') {
+                exibirMensagemErro('nome', 'Por favor, digite um nome válido.');
+                return false;
+            } else if (nomeValor.length < 2 || nomeValor.length > 150) {
+                exibirMensagemErro('nome', 'O campo "nome" deve ter entre 2 e 150 caracteres.');
+                return false;
+            } else if (!regex.test(nomeValor)) {
+                exibirMensagemErro('nome', 'O campo "nome" deve ter apenas letras e/ou números.');
+                return false;
+            }
+            return true;
+        }
+
+        function validarCampoDescricao() {
+            const descricao = document.querySelector('#descricao');
+            const regex = /^[a-zA-Z0-9\sÀ-ÿ]*$/; // expressão regular para validar letras de A a Z, números de 0 a 9, espaços em branco e letras acentuadas
+
+            if (descricao) {
+                const descricaoValor = descricao.value.trim();
+                limparMensagemErro('descricao');
+
+                if (descricaoValor === '') return true;
+
+                if (descricaoValor.length < 2 || descricaoValor.length > 150) {
+                    exibirMensagemErro('descricao', 'O campo "descrição" deve ter entre 2 e 150 caracteres.');
+                    return false;
+                } else if (!regex.test(descricaoValor)) {
+                    exibirMensagemErro('descricao', 'O campo "descrição" deve ter apenas letras e/ou números.');
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        const cadastrarProduto = async (dadosProduto) => {
+            const url = `http://localhost:8000/produtos`;
+
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dadosProduto),
+            };
+
+            if (validarCampoNome() && validarCampoDescricao()) {
+                try {
+                    const response = await fetch(url, requestOptions);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        const errorMessage = data.error || 'Erro desconhecido ao cadastrar o produto.';
+                        throw new Error(errorMessage);
+                    }
+
+                    return data;
+                } catch (error) {
+                    throw error;
+                }
+            }
+        };
+
+        const handleCadastroSubmit =  async (event) => {
+            event.preventDefault();
+
+            const nomeProduto = document.querySelector('#nome').value.trim();
+            const descricaoProduto = document.querySelector('#descricao').value.trim();
+            const categoriaProduto = document.querySelector('#categoria').value;
 
             const data = {
                 nome: nomeProduto,
@@ -77,40 +159,15 @@
             };
 
             try {
-                const url = `http://localhost:8000/produtos`;
-
-                const requestOptions = {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(data),
-                };
-
-                const response = await fetch(url, requestOptions);
-                const mensagem = await response.json();
-
-                if (mensagem.error) {
-                    alert(mensagem.error);
-                    console.log(mensagem.error);
-                } else if (mensagem.id) {
-                    alert("Produto criado com sucesso!" + " ID do Produto: " + mensagem.id);
-                }
+                const result = await cadastrarProduto(data);
+                alert('Produto criado com sucesso!' + ' ID do Produto: ' + result.id);
             } catch (error) {
-                console.error(error);
-                throw error;
+                console.log(error);
+                alert(error.message);
             }
         };
 
-        document.getElementById("formCadastro").addEventListener("submit", async function (ev) {
-            ev.preventDefault();
-            
-            try {
-                await cadastrarProduto();
-            } catch (error) {
-                console.error(error);
-            }
-        });
+        document.querySelector('#formCadastro').addEventListener('submit', handleCadastroSubmit);
 
     </script>
 </body>

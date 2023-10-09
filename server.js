@@ -1,17 +1,21 @@
-const http = require("http");
-const { handleGetRequest, handlePostRequest, handleDeleteRequest, handlePutRequest } = require("./routes/produtos");
-const db = require("./db");
+const http = require('http');
+const db = require('./db');
+const {
+    handleGetRequest,
+    handlePostRequest,
+    handleDeleteRequest,
+    handlePutRequest } = require('./controller/produtoController');
 
 const PORT = 8000;
 
 http.createServer(async (req, res) => {
-    if (req.method === "GET") {
+    if (req.method === 'GET') {
         await handleGetRequest(req, res);
-    } else if (req.method === "POST") {
+    } else if (req.method === 'POST') {
         await handlePostRequest(req, res);
-    } else if (req.method === "DELETE") {
+    } else if (req.method === 'DELETE') {
         await handleDeleteRequest(req, res);
-    } else if (req.method === "PUT") {
+    } else if (req.method === 'PUT') {
         await handlePutRequest(req, res);
     }
 

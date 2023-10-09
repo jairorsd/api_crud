@@ -13,28 +13,17 @@
         <a id="cadastro" href="cadastro.html">Cadastrar novo produto</a>
 
         <fieldset>
-            <label for="categoria">
-                <input type="checkbox" id="categoria" name="categoria">
-                Só Com Categoria
-            </label>
-            <label for="pesquisar">Pesquisar por:</label>
-
-            <input type="radio" name="pesquisar" id="pesquisaNome" checked>
-            <label for="pesquisaNome">Nome</label>
-            <input type="radio" name="pesquisar" id="pesquisaId">
-            <label for="pesquisaId">Id</label>
-
-            <input id="pesquisar" type="text">
-            <input id="limpar" type="button" value="Limpar">
+            <label for="pesquisar">Pesquisar ID:</label>
+            <input id="pesquisar" type="text" pattern="\d+" title="Digite um número inteiro maior ou igual a 1.">
+            <button id="limpar">Limpar</button>
         </fieldset>
 
-        <table id=tabelaProdutos>
+        <table id="tabelaProdutos">
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Nome</th>
                     <th>Descrição</th>
-                    <th>Categoria</th>
                     <th></th>
                 </tr>
             </thead>
@@ -45,268 +34,194 @@
     <script>
 
         const buscarTodosProdutos = async () => {
+            const url = 'http://localhost:8000/produtos';
+
             try {
-                const url = "http://localhost:8000/produtos";
                 const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.error) {
-                    mostrarMensagem(data.error);
-                } else if (data.produtos) {
-                    mostrarTabela();
-                    limparTabela();
-
-                    data.produtos.forEach(produto => {
-                        inserirLinhaNaTabela(produto);
-                    });
+                if (!response.ok) {
+                    const data = await response.json();
+                    console.log(data.error);
                 }
+                return response.ok ? await response.json() : [];
             } catch (error) {
-                console.error(error);
+                console.log(error);
+                return [];
             }
         };
+
+        const mostrarProdutos = async () => {
+            try {
+                const produtos = await buscarTodosProdutos();
+                mostrarTabela();
+                limparTabela();
+                produtos.forEach(produto => inserirLinhaNaTabela(produto));
+            } catch (error) {
+                console.log(error);
+            }
+        };
+
+        mostrarProdutos();
 
         const excluirProduto = async (id) => {
+            const url = `http://localhost:8000/produtos/${id}`;
+
             try {
-                const url = `http://localhost:8000/produtos/${id}`;
-                const response = await fetch(url, { method: "DELETE" });
+                const response = await fetch(url, { method: 'DELETE' });
                 const data = await response.json();
 
-                if (data.error) {
-                    mostrarMensagem(data.error);
-                } else if (data.message) {
-                    alert(data.message);
+                if (!response.ok) {
+                    const errorMessage = data.error || 'Erro desconhecido ao tentar excluir o produto.';
+                    throw new Error(errorMessage);
                 }
+
+                return data;
             } catch (error) {
-                console.error(error);
                 throw error;
             }
         };
 
-        const addListenerLinkExluir = async (link) => {
-            link.addEventListener("click", async function (event) {
-                event.preventDefault();
+        const handleExcluirClick = async (event) => {
+            event.preventDefault();
 
-                const row = event.target.closest("tr");
-                const id = row.cells[0].textContent;
+            const row = event.target.closest('tr');
+            const id = row.cells[0].textContent;
 
-                try {
-                    await excluirProduto(id);
-                    row.remove();
-                } catch (error) {
-                    console.error(error);
+            try {
+                const result = await excluirProduto(id);
+                row.remove();
+
+                if (result && result.message) {
+                    alert(result.message);
                 }
-            });
+            } catch (error) {
+                console.log('Erro ao excluir o produto:', error);
+                alert('Erro ao tentar excluir o produto: ' + error.message);
+            }
         };
 
-        const buscarProdutoPeloId = async (id) => {
-            if (!id) return;
+        const addListenerLinkExcluir = async link => {
+            link.addEventListener('click', handleExcluirClick);
+        };
 
-            if (isNaN(parseInt(id))) {
-                mostrarMensagem("ID Inválido");
+        const buscarProdutoPeloId = async id => {
+            const url = `http://localhost:8000/produtos/${id}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const errorMessage = data.error;
+                    throw new Error(errorMessage);
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        };
+
+        const mostrarProdutoPeloID = async (id) => {
+            // Expressão regular para aceitar apenas números inteiros
+            if (id < 1 || !/^\d+$/.test(id)) {
+                mostrarMensagem('Digite um número inteiro maior ou igual a 1.');
                 return;
-            }
+            };
 
             try {
-                const url = `http://localhost:8000/produtos/${id}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.error) {
-                    mostrarMensagem(data.error);
-                } else if (data.produto) {
+                const produto = await buscarProdutoPeloId(id);
+                if (produto) {
                     mostrarTabela();
                     limparTabela();
-                    inserirLinhaNaTabela(data.produto);
+                    inserirLinhaNaTabela(produto);
                 }
             } catch (error) {
-                console.error(error);
-                throw error;
+                console.log(error);
+                mostrarMensagem(error.message);
             }
         };
 
-        const buscarProdutoPeloNome = async (nome) => {
-            if (!nome) return;
+        document.querySelector('#pesquisar')
+            .addEventListener('input', async function () {
 
-            try {
-                const url = `http://localhost:8000/produtos?nome=${nome}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.error) {
-                    mostrarMensagem(data.error);
-                } else if (data.produtos) {
-                    mostrarTabela();
-                    limparTabela();
-
-                    data.produtos.forEach(produto => {
-                        inserirLinhaNaTabela(produto);
-                    });
-                }
-
-            } catch (error) {
-                console.error(error);
-                throw error;
-            }
-        };
-
-        const buscarApenasProdutosComCategoria = async () => {
-            try {
-                const url = "http://localhost:8000/produtosComCategoria";
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.error) {
-                    mostrarMensagem(data.error);
-                } else if (data.produtos) {
-                    mostrarTabela();
-                    limparTabela();
-
-                    data.produtos.forEach(produto => {
-                        inserirLinhaNaTabela(produto);
-                    });
-                }
-            } catch (error) {
-                console.error(error);
-                throw error;
-            }
-        };
-
-        document.getElementById("categoria")
-            .addEventListener("change", async function () {
-
-                if (this.checked) {
+                if (this.value === '') {
                     try {
-                        await buscarApenasProdutosComCategoria();
+                        await mostrarProdutos();
                     } catch (error) {
                         console.error(error);
                     }
                 } else {
-
-                    try {
-                        await buscarTodosProdutos();
-                    } catch (error) {
-                        console.error(error);
-                    }
-                }
-            });
-
-        document.getElementById("pesquisar")
-            .addEventListener("input", async function () {
-                const radio = document.getElementById("pesquisaNome");
-
-                if (this.value === "") {
-                    try {
-                        await buscarTodosProdutos();
-                        return;
-                    } catch (error) {
-                        console.error(error);
-                    }
-                }
-                if (radio.checked) {
-                    try {
-                        await buscarProdutoPeloNome(this.value.trim());
-                    } catch (error) {
-                        console.error(error);
-                    }
-                } else {
-                    try {
-                        await buscarProdutoPeloId(this.value.trim());
-                    } catch (error) {
-                        console.error(error);
-                    }
+                    await mostrarProdutoPeloID(this.value);
                 }
             });
 
         function mostrarMensagem(msg) {
-            const mensagem = document.getElementById("mensagem");
-            const tabelaProdutos = document.getElementById("tabelaProdutos");
+            const mensagem = document.querySelector('#mensagem');
+            const tabelaProdutos = document.querySelector('#tabelaProdutos');
 
-            tabelaProdutos.style.display = "none";
+            tabelaProdutos.style.display = 'none';
             mensagem.innerHTML = msg;
-            mensagem.style.display = "block";
+            mensagem.style.display = 'block';
         };
 
         function mostrarTabela() {
-            const tabelaProdutos = document.getElementById("tabelaProdutos");
-            const mensagem = document.getElementById("mensagem");
+            const tabelaProdutos = document.querySelector('#tabelaProdutos');
+            const mensagem = document.querySelector('#mensagem');
 
-            tabelaProdutos.style.display = "table";
-            mensagem.innerHTML = "";
-            mensagem.style.display = "none";
+            tabelaProdutos.style.display = 'table';
+            mensagem.innerHTML = '';
+            mensagem.style.display = 'none';
         };
 
         function limparCampoPesquisa() {
-            const campoPesquisar = document.getElementById("pesquisar");
+            const campoPesquisar = document.querySelector('#pesquisar');
             if (!campoPesquisar.value) return;
-            campoPesquisar.value = "";
+            campoPesquisar.value = '';
             campoPesquisar.focus();
         };
 
-        document.getElementById("limpar").addEventListener("click", function () {
-            limparCampoPesquisa();
-            buscarTodosProdutos();
-        });
-
-        function addListenerLinkEditar(link) {
-            link.addEventListener("click", function (event) {
-                event.preventDefault();
-
-                const row = event.target.closest("tr");
-
-                const id = row.cells[0].textContent;
-                const nome = row.cells[1].textContent;
-                const descricao = row.cells[2].textContent;
-                const categoria = row.cells[3].textContent;
-
-                let urlBase = `edita.html?id=${id}&nome=${nome}`;
-
-                if (descricao) {
-                    urlBase += `&descricao=${descricao}`;
-                }
-
-                if (categoria) {
-                    urlBase += `&categoria=${categoria}`;
-                }
-
-                window.location.href = urlBase;
-
+        document.querySelector('#limpar')
+            .addEventListener('click', function () {
+                limparCampoPesquisa();
+                mostrarProdutos();
             });
-        };
 
         function inserirLinhaNaTabela(produto) {
-            const tbody = document.getElementById("tabelaProdutos").getElementsByTagName("tbody")[0];
+            const { id, nome, descricao, categoria_id } = produto;
+            const tbody = document.querySelector('tbody');
 
             const row = tbody.insertRow();
 
-            row.insertCell().textContent = produto.id;
-            row.insertCell().textContent = produto.nome;
-            row.insertCell().textContent = produto.descricao || "";
-            row.insertCell().textContent = produto.categoria || "";
+            row.insertCell().textContent = id;
+            row.insertCell().textContent = nome;
+            row.insertCell().textContent = descricao || '';
 
-            const linkEditar = document.createElement("a");
-            linkEditar.href = "#";
-            linkEditar.textContent = "Editar";
-            linkEditar.classList.add("link-editar");
-            addListenerLinkEditar(linkEditar);
+            if (produto.categoria || produto.categoria === null) {
+                row.insertCell().textContent = produto.categoria || '';
+            }
 
-            const linkExcuir = document.createElement("a");
-            linkExcuir.href = "#";
-            linkExcuir.textContent = "Excluír";
-            linkExcuir.classList.add("link-excluír");
-            addListenerLinkExluir(linkExcuir);
+            const linkEditar = document.createElement('a');
+            const href = `edita.html?id=${id}&nome=${nome}${descricao ? `&descricao=${descricao}` : ''}${categoria_id !== null ? `&categoria_id=${categoria_id}` : ''}`;
+            linkEditar.href = href;
+            linkEditar.textContent = 'Editar';
+            linkEditar.classList.add('link-editar');
+
+            const linkExcuir = document.createElement('a');
+            linkExcuir.href = `http://localhost:8000/produtos/${produto.id}`;
+            linkExcuir.textContent = 'Excluír';
+            linkExcuir.classList.add('link-excluír');
+            addListenerLinkExcluir(linkExcuir);
 
             const tdLinks = row.insertCell();
             tdLinks.appendChild(linkEditar);
-            tdLinks.appendChild(document.createTextNode(" | "));
+            tdLinks.appendChild(document.createTextNode(' | '));
             tdLinks.appendChild(linkExcuir);
         };
 
         function limparTabela() {
-            const tbody = document.getElementById("tabelaProdutos").getElementsByTagName("tbody")[0];
-            tbody.innerHTML = "";
+            const tbody = document.querySelector('tbody');
+            tbody.innerHTML = '';
         };
-
-        buscarTodosProdutos();
 
     </script>
     </table>

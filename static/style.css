@@ -22,7 +22,9 @@ fieldset {
     margin: 10px 0 0 0;
 }
 
-fieldset label:first-of-type {
+
+fieldset div {
+    display: flex;
     float: left;
 }
 
@@ -58,7 +60,7 @@ h2 {
     margin-left: 10px;
 }
 
-input[type=button] {
+button {
     cursor: pointer;
 }
 
@@ -83,8 +85,7 @@ input[type=button] {
 #formCadastro button,
 #formEdita button {
     padding: 10px 20px;
-    align-self: baseline;
-    cursor: pointer;
+    align-self: flex-end;
 }
 
 #formCadastro select,
@@ -92,6 +93,11 @@ input[type=button] {
     padding: 5px;
     align-self: baseline;
     margin-bottom: 10px;
+}
+
+.opcional {
+    color: #999;
+    font-style: italic;
 }
 
 strong {

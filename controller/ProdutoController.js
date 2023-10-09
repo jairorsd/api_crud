@@ -1,205 +1,174 @@
-const url = require("url");
-const db = require("../db");
-const { getReqData } = require("../utils");
+const Produto = require('../model/produtoModel');
+const Categoria = require('../model/categoriaModel');
 
-const buscarProdutos = async (req, res) => {
-    const sql = "SELECT A.ID AS id, " +
-        "A.NOME AS nome, " +
-        "A.DESCRICAO AS descricao, " +
-        "C.NOME AS categoria " +
-        "FROM produto A " +
-        "LEFT JOIN categoria C ON A.CATEGORIA_ID = C.ID";
+const { getReqData } = require('../utils/getData');
+const { MIME_TYPES, prepareFile } = require('../utils/fileHandler');
 
-    db.all(sql, (err, rows) => {
-        if (err) {
-            res.writeHead(500, { "Content-Type": "application/json" });
+const handleGetRequest = async (req, res) => {
+    if (req.url === '/produtos') {
+        try {
+            const produtos = await Produto.buscarTodos();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(produtos));
+
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
-            return;
         }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ produtos: rows }));
-    });
-};
-
-const criarProduto = async (req, res) => {
-    const data = await getReqData(req);
-
-    const { nome, descricao, categoria } = JSON.parse(data);
-
-    if (!nome) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "O campo \"nome\" é obrigatório" }));
-        return;
     }
-    db.run("INSERT INTO produto (nome, descricao, categoria_id) VALUES (?, ?, ?)", [nome, descricao, categoria],
-        function (err) {
-            if (err) {
-                res.writeHead(500, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({ error: err.message }));
+    else if (req.url === '/produtosComACategoria') {
+        try {
+            const produtos = await Produto.buscarTodosComACategoria();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(produtos));
+
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+        }
+    }
+    else if (req.url.match(/^\/produtos\/\d+$/)) {
+        try {
+            const id = parseInt(req.url.split('/')[2]);
+            const produto = await Produto.buscarPorId(id);
+
+            if (isNaN(id)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'ID inválido' }));
                 return;
             }
 
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ id: this.lastID }));
-        });
-};
+            if (!produto) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Produto não encontrado' }));
+                return;
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(produto));
 
-const buscarProdutoPeloId = async (req, res) => {
-    const id = parseInt(req.url.split("/")[2]);
-
-    if (isNaN(id)) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "ID inválido" }));
-        return;
-    }
-
-    const sql = "SELECT A.ID AS id, " +
-        "A.NOME AS nome, " +
-        "A.DESCRICAO AS descricao, " +
-        "C.NOME AS categoria " +
-        "FROM produto A " +
-        "LEFT JOIN categoria C ON A.CATEGORIA_ID = C.ID " +
-        "WHERE A.ID = ?";
-
-    db.get(sql, [id], (err, row) => {
-        if (err) {
-            res.writeHead(500, { "Content-Type": "application/json" });
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
-            return;
         }
+    } else if (req.url === '/categorias') {
+        try {
+            const categorias = await Categoria.buscarTodos();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(categorias));
 
-        if (!row) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Produto não encontrado" }));
-            return;
-        }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ produto: row }));
-    });
-};
-
-const buscarProdutoPeloNome = async (req, res) => {
-    const parsedUrl = url.parse(req.url, true);
-    const nome = parsedUrl.query["nome"];
-
-    const sql = "SELECT A.ID AS id, " +
-        "A.NOME AS nome, " +
-        "A.DESCRICAO AS descricao, " +
-        "C.NOME AS categoria " +
-        "FROM produto A " +
-        "LEFT JOIN categoria C ON A.CATEGORIA_ID = C.ID " +
-        "WHERE A.NOME LIKE ?";
-
-    db.all(sql, [nome + "%"], (err, row) => {
-        if (err) {
-            res.writeHead(500, { "Content-Type": "application/json" });
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
-            return;
         }
-
-        if (row.length === 0) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Produto não encontrado" }));
-            return;
-        }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ produtos: row }));
-    });
+    }
+    else {
+        const file = await prepareFile(req.url);
+        const statusCode = file.found ? 200 : 404;
+        const mimeType = MIME_TYPES[file.ext] || MIME_TYPES.default;
+        res.writeHead(statusCode, { 'Content-Type': mimeType });
+        file.stream.pipe(res);
+        console.log(`${req.method} ${req.url} ${statusCode}`);
+    }
 };
 
-const buscarSomenteProdutosComCategoria = async (req, res) => {
-    const sql = "SELECT A.ID AS id, " +
-        "A.NOME AS nome, " +
-        "A.DESCRICAO AS descricao, " +
-        "C.NOME AS categoria " +
-        "FROM produto A " +
-        "INNER JOIN categoria C ON A.CATEGORIA_ID = C.ID";
+const handlePostRequest = async (req, res) => {
+    if (req.url === '/produtos') {
+        try {
+            const data = await getReqData(req);
+            const produto = JSON.parse(data);
 
-    db.all(sql, (err, rows) => {
-        if (err) {
-            res.writeHead(500, { "Content-Type": "application/json" });
+            if (!produto.nome) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'O campo "nome" é obrigatório' }));
+                return;
+            }
+            const idProduto = await Produto.criar(produto);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ id: idProduto }));
+
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
-            return;
         }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ produtos: rows }));
-    });
+    } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Rota não encontrada' }));
+    }
 };
 
-const excluirProduto = async (req, res) => {
-    const id = parseInt(req.url.split("/")[2]);
+const handleDeleteRequest = async (req, res) => {
+    if (req.url.match(/^\/produtos\/\d+$/)) {
+        try {
+            const id = parseInt(req.url.split('/')[2]);
 
-    if (isNaN(id)) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "ID inválido" }));
-        return;
-    }
+            if (isNaN(id)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'ID inválido' }));
+                return;
+            }
+            const foiExcluido = await Produto.excluir(id) !== 0;
 
-    db.run("DELETE FROM produto WHERE id = ?", [id], function (err) {
-        if (err) {
-            res.writeHead(500, { "Content-Type": "application/json" });
+            if (!foiExcluido) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Produto não encontrado' }));
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Produto excluído com sucesso' }));
+            }
+
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
-            return;
         }
-
-        if (this.changes === 0) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Produto não encontrado" }));
-            return;
-        }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ message: "Produto excluído com sucesso" }));
-    });
+    } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Rota não encontrada' }));
+    }
 };
 
-const atualizarProduto = async (req, res) => {
-    const data = await getReqData(req);
+const handlePutRequest = async (req, res) => {
+    if (req.url === '/produtos') {
+        try {
+            const data = await getReqData(req);
+            const produto = JSON.parse(data);
 
-    const { id, nome, descricao, categoria } = JSON.parse(data);
-
-    if (isNaN(parseInt(id))) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "ID inválido" }));
-        return;
-    }
-
-    if (!nome) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(({ error: "O campo \"nome\" é obrigatório" })));
-        return;
-    }
-
-    db.run("UPDATE produto SET nome = ?, descricao = ?, categoria_id = ? WHERE id = ?",
-        [nome, descricao, categoria, id],
-        function (err) {
-            if (err) {
-                res.writeHead(500, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({ error: err.message }));
+            if (isNaN(parseInt(produto.id))) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'ID inválido' }));
                 return;
             }
 
-            if (this.changes === 0) {
-                res.writeHead(404, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({ error: "Produto não encontrado" }));
+            if (!produto.nome) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'O campo "nome" é obrigatório' }));
                 return;
             }
+            const foiAtualizado = await Produto.atualizar(produto) !== 0;
 
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ message: "Produto atualizado com sucesso" }));
-        });
+            if (!foiAtualizado) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Produto não encontrado' }));
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Produto atualizado com sucesso' }));
+            }
+
+        } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+        }
+
+    } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Rota não encontrada' }));
+    }
 };
 
 module.exports = {
-    buscarProdutos,
-    buscarProdutoPeloId,
-    buscarProdutoPeloNome,
-    buscarSomenteProdutosComCategoria,
-    criarProduto,
-    excluirProduto,
-    atualizarProduto,
+    handleGetRequest,
+    handlePostRequest,
+    handleDeleteRequest,
+    handlePutRequest
 };
+

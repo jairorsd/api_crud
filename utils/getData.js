@@ -1,13 +1,13 @@
 function getReqData(req) {
     return new Promise((resolve, reject) => {
         try {
-            let body = "";
+            let body = '';
 
-            req.on("data", function (chunk) {
+            req.on('data', function (chunk) {
                 body += chunk.toString();
             });
 
-            req.on("end", () => {
+            req.on('end', () => {
                 resolve(body);
             });
         } catch (error) {
